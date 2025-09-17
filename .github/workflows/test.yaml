@@ -20,30 +20,26 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
-      ARTIFACT_SOYWEB: "soyweb-test_result-go${{ matrix.go-version }}_${{ matrix.os }}.json"
+      ARTIFACT_TEST: "soyweb-test_result-go${{ matrix.go-version }}_${{ matrix.os }}.json"
     steps:
+      - name: Setup Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
       - name: Checkout code
         uses: actions/checkout@master
         with:
           fetch-depth: "0"
           submodules: recursive
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ matrix.go-version }}
-          go-version-file: "./go.mod"
-          cache: false
-          check-latest: true
-
-      - name: Test soyweb
+      - name: Test ssg-go
         run: |
-          echo "PWD: $pwd"
-          echo "Testing soyweb and writing JSON report to $ARTIFACT_SOYWEB"
-          go test -race -count=1 -json ./... | tee $ARTIFACT_SOYWEB
+          nix develop --command bash -c "
+            echo "test.yaml: Starting test"
+            go test -race -count=1 -p=1 -json ./... | tee $ARTIFACT_TEST
+          ";
 
       - name: Upload Go test results
         uses: actions/upload-artifact@v4
         with:
           name: test_result-go${{ matrix.go-version }}_${{ matrix.os }}
-          path: ${{ env.ARTIFACT_SOYWEB }}
+          path: ${{ env.ARTIFACT_TEST }}
