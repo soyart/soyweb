@@ -31,7 +31,7 @@ jobs:
           fetch-depth: "0"
           submodules: recursive
 
-      - name: Test ssg-go
+      - name: Test soyweb
         run: |
           nix develop --command bash -c "
             echo "test.yaml: Starting test"
