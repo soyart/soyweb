@@ -9,8 +9,8 @@ import (
 
 func main() {
 	// Run from /soyweb
-	src := "../testdata/myblog/src"
-	dst := "../testdata/myblog/dst-cmd"
+	src := "./testdata/myblog/src"
+	dst := "./testdata/myblog/dst-cmd"
 	title := "TestIndexGeneratorCMD"
 	url := "https://myblog.com"
 

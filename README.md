@@ -21,7 +21,7 @@ is going to be built. The manifest is like a config file or `package.json`
 for our site - it defines ssg options (e.g. the source and destination directories)
 as well as other soyweb options.
 
-> See [`manifest.json`](../testdata/manifest.json) as example
+> See [`manifest.json`](./testdata/manifest.json) as example
 >
 > To try soyweb, go into `./testdata` and run soyweb
 
@@ -199,7 +199,7 @@ Each site object contains options for the site,
 like [the soyweb index generator](#soyweb-index-generator)
 and [soyweb minifiers](#soyweb-minifiers).
 
-Real world example would be [manifest.json](../testdata/manifest.json).
+Real world example would be [manifest.json](./testdata/manifest.json).
 
 A soyweb site can be thought of as the smallest unit of a website,
 and how your site will be organized into soyweb sites are entirely up to you.
