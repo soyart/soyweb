@@ -77,7 +77,7 @@ func (s *Site) UnmarshalJSON(b []byte) error {
 		Src   string `json:"src"`
 		Dst   string `json:"dst"`
 		Title string `json:"title"`
-		Url   string `json:"url"`
+		URL   string `json:"url"`
 
 		Copies            map[string]CopyTargets `json:"copies"`
 		CleanUp           bool                   `json:"cleanup"`
@@ -101,7 +101,7 @@ func (s *Site) UnmarshalJSON(b []byte) error {
 			site.Src,
 			site.Dst,
 			site.Title,
-			site.Url,
+			site.URL,
 		),
 	}
 	return nil
@@ -304,7 +304,7 @@ func ApplyManifestV2(m Manifest, f FlagsV2, do Stage) error {
 			WithGroup("copy").
 			With(
 				"key", key,
-				"url", site.ssg.Url,
+				"url", site.ssg.URL,
 			),
 		)
 		if !do.Ok(StageCopy) {
@@ -330,7 +330,7 @@ func ApplyManifestV2(m Manifest, f FlagsV2, do Stage) error {
 			WithGroup("build").
 			With(
 				"key", key,
-				"url", site.ssg.Url,
+				"url", site.ssg.URL,
 			)
 
 		if !do.Ok(StageBuild) {
@@ -344,7 +344,7 @@ func ApplyManifestV2(m Manifest, f FlagsV2, do Stage) error {
 		log.
 			With(
 				"key", key,
-				"url", site.ssg.Url,
+				"url", site.ssg.URL,
 				// @TODO: Len logs below will be removed
 				// "len_hooks", len(b.Hooks()),
 				// "len_hooks_generate", len(b.HooksGenerate()),
@@ -372,7 +372,7 @@ func collect(m Manifest) (map[string]ssg.Set, error) {
 		if targets[key] == nil {
 			targets[key] = make(ssg.Set)
 		}
-		logger := slog.Default().WithGroup("collect").With("key", key, "url", site.ssg.Url)
+		logger := slog.Default().WithGroup("collect").With("key", key, "url", site.ssg.URL)
 		for src, dests := range site.Copies {
 			for i := range dests {
 				dst := dests[i]
@@ -404,7 +404,7 @@ func cleanup(m Manifest, targets map[string]ssg.Set) error {
 		}
 		logger := slog.Default().
 			WithGroup("cleanup").
-			With("key", key, "url", site.ssg.Url)
+			With("key", key, "url", site.ssg.URL)
 
 		siteTargets := targets[key]
 		for target := range siteTargets {
@@ -552,7 +552,6 @@ func cpRecurse(src string, dst CopyTarget) error {
 		}
 		return cp(path, out, info.Mode().Perm())
 	})
-
 	if err != nil {
 		return fmt.Errorf("walkDir failed for src '%s', dst '%s': %w", src, dst.Target, err)
 	}

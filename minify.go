@@ -19,21 +19,21 @@ type (
 )
 
 const (
-	MediaTypeHtml = "text/html"
-	MediaTypeCss  = "style/css"
-	MediaTypeJs   = "text/javascript"
-	MediaTypeJson = "application/json"
+	MediaTypeHTML = "text/html"
+	MediaTypeCSS  = "style/css"
+	MediaTypeJS   = "text/javascript"
+	MediaTypeJSON = "application/json"
 
-	ExtHtml = ".html"
-	ExtCss  = ".css"
-	ExtJs   = ".js"
-	ExtJson = ".json"
+	ExtHTML = ".html"
+	ExtCSS  = ".css"
+	ExtJS   = ".js"
+	ExtJSON = ".json"
 )
 
 var m = minify.New()
 
 func init() {
-	m.Add(MediaTypeHtml, &html.Minifier{
+	m.Add(MediaTypeHTML, &html.Minifier{
 		// Default values are shown to be more conspicuous
 		KeepComments:            false,
 		KeepConditionalComments: false,
@@ -45,15 +45,15 @@ func init() {
 		KeepWhitespace:          false,
 		TemplateDelims:          [2]string{},
 	})
-	m.AddFunc(MediaTypeCss, css.Minify)
-	m.AddFunc(MediaTypeJs, js.Minify)
-	m.AddFunc(MediaTypeJson, json.Minify)
+	m.AddFunc(MediaTypeCSS, css.Minify)
+	m.AddFunc(MediaTypeJS, js.Minify)
+	m.AddFunc(MediaTypeJSON, json.Minify)
 }
 
-func MinifyHtml(og []byte) ([]byte, error) { return minifyMedia(og, MediaTypeHtml) }
-func MinifyCss(og []byte) ([]byte, error)  { return minifyMedia(og, MediaTypeCss) }
-func MinifyJs(og []byte) ([]byte, error)   { return minifyMedia(og, MediaTypeJs) }
-func MinifyJson(og []byte) ([]byte, error) { return minifyMedia(og, MediaTypeJson) }
+func MinifyHTML(og []byte) ([]byte, error) { return minifyMedia(og, MediaTypeHTML) }
+func MinifyCSS(og []byte) ([]byte, error)  { return minifyMedia(og, MediaTypeCSS) }
+func MinifyJS(og []byte) ([]byte, error)   { return minifyMedia(og, MediaTypeJS) }
+func MinifyJSON(og []byte) ([]byte, error) { return minifyMedia(og, MediaTypeJSON) }
 
 func MinifyAll(path string, data []byte) ([]byte, error) {
 	fn, err := ExtToFn(filepath.Ext(path))
@@ -92,45 +92,45 @@ func MinifyFile(path string) ([]byte, error) {
 
 func ExtToMediaType(ext string) (string, error) {
 	switch ext {
-	case ExtHtml:
-		return MediaTypeHtml, nil
-	case ExtCss:
-		return MediaTypeCss, nil
-	case ExtJs:
-		return MediaTypeJs, nil
-	case ExtJson:
-		return MediaTypeJson, nil
+	case ExtHTML:
+		return MediaTypeHTML, nil
+	case ExtCSS:
+		return MediaTypeCSS, nil
+	case ExtJS:
+		return MediaTypeJS, nil
+	case ExtJSON:
+		return MediaTypeJSON, nil
 	}
 	return "", fmt.Errorf("'%s': %w", ext, ErrWebFormatNotSupported)
 }
 
 func ExtToFn(ext string) (func([]byte) ([]byte, error), error) {
 	switch ext {
-	case ExtHtml:
-		return MinifyHtml, nil
-	case ExtCss:
-		return MinifyCss, nil
-	case ExtJs:
-		return MinifyJs, nil
-	case ExtJson:
-		return MinifyJson, nil
+	case ExtHTML:
+		return MinifyHTML, nil
+	case ExtCSS:
+		return MinifyCSS, nil
+	case ExtJS:
+		return MinifyJS, nil
+	case ExtJSON:
+		return MinifyJSON, nil
 	}
 	return nil, fmt.Errorf("'%s': %w", ext, ErrWebFormatNotSupported)
 }
 
 func HookMinifyDefault(mediaTypes ssg.Set) ssg.Hook {
 	m := make(map[string]MinifyFn)
-	if mediaTypes.Contains(MediaTypeHtml) {
-		m[ExtHtml] = MinifyHtml
+	if mediaTypes.Contains(MediaTypeHTML) {
+		m[ExtHTML] = MinifyHTML
 	}
-	if mediaTypes.Contains(MediaTypeJs) {
-		m[ExtJs] = MinifyJs
+	if mediaTypes.Contains(MediaTypeJS) {
+		m[ExtJS] = MinifyJS
 	}
-	if mediaTypes.Contains(MediaTypeJson) {
-		m[ExtJson] = MinifyJson
+	if mediaTypes.Contains(MediaTypeJSON) {
+		m[ExtJSON] = MinifyJSON
 	}
-	if mediaTypes.Contains(MediaTypeCss) {
-		m[ExtCss] = MinifyCss
+	if mediaTypes.Contains(MediaTypeCSS) {
+		m[ExtCSS] = MinifyCSS
 	}
 	return HookMinify(m)
 }

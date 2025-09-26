@@ -26,14 +26,12 @@ func main() {
 
 func run(c *cli) error {
 	flags := c.Flags()
-
 	opts := []ssg.Option{
 		ssg.WritersFromEnv(),
 		ssg.WithHooks(flags.Hooks()...),
 	}
-	if flags.MinifyHtmlGenerate {
-		opts = append(opts, ssg.WithHooksGenerate(soyweb.MinifyHtml))
+	if flags.MinifyHTMLGenerate {
+		opts = append(opts, ssg.WithHooksGenerate(soyweb.MinifyHTML))
 	}
-
 	return ssg.Generate(c.Src, c.Dst, c.Title, c.Url, opts...)
 }

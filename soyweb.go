@@ -57,9 +57,9 @@ func (b *builder) Hooks() []ssg.Hook {
 }
 
 func (b *builder) HooksGenerate() []ssg.HookGenerate {
-	if b.flags.MinifyHtmlGenerate {
+	if b.flags.MinifyHTMLGenerate {
 		return []ssg.HookGenerate{
-			MinifyHtml,
+			MinifyHTML,
 		}
 	}
 	return nil
