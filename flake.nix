@@ -27,7 +27,7 @@
           inherit version;
           pname = "soyweb";
           src = ./.;
-          vendorHash = "sha256-YUP5daCo8pEkQYpNETEozgOpkwnGmkIAebIaTiNc7W0=";
+          vendorHash = "sha256-1cj4L2eGRXFuU4LNPBL4/9Ucw3kkWjUNDJAOtkJNlwQ=";
           meta = {
             homepage = "https://github.com/soyart/soyweb";
             description = "ssg-go wrapper";

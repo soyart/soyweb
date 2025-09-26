@@ -13,17 +13,17 @@ type FlagsV2 struct {
 	NoReplace       bool `arg:"--no-replace" help:"Do not do text replacements defined in manifest"`
 	NoGenerateIndex bool `arg:"--no-gen-index" help:"Do not generate indexes on _index.soyweb"`
 
-	MinifyHtmlGenerate bool `arg:"--min-html" help:"Minify converted HTML outputs"`
-	MinifyHtmlCopy     bool `arg:"--min-html-copy" help:"Minify all copied HTML"`
-	MinifyCss          bool `arg:"--min-css" help:"Minify CSS files"`
+	MinifyHTMLGenerate bool `arg:"--min-html" help:"Minify converted HTML outputs"`
+	MinifyHTMLCopy     bool `arg:"--min-html-copy" help:"Minify all copied HTML"`
+	MinifyCSS          bool `arg:"--min-css" help:"Minify CSS files"`
 	MinifyJs           bool `arg:"--min-js" help:"Minify Javascript files"`
 	MinifyJson         bool `arg:"--min-json" help:"Minify JSON files"`
 }
 
 type FlagsNoMinify struct {
-	NoMinifyHtmlGenerate bool `arg:"--no-min-html,env:NO_MIN_HTML" help:"Do not minify converted HTML outputs"`
-	NoMinifyHtmlCopy     bool `arg:"--no-min-html-copy,env:NO_MIN_HTML_COPY" help:"Do not minify all copied HTML"`
-	NoMinifyCss          bool `arg:"--no-min-css,env:NO_MIN_CSS" help:"Do not minify CSS files"`
+	NoMinifyHTMLGenerate bool `arg:"--no-min-html,env:NO_MIN_HTML" help:"Do not minify converted HTML outputs"`
+	NoMinifyHTMLCopy     bool `arg:"--no-min-html-copy,env:NO_MIN_HTML_COPY" help:"Do not minify all copied HTML"`
+	NoMinifyCSS          bool `arg:"--no-min-css,env:NO_MIN_CSS" help:"Do not minify CSS files"`
 	NoMinifyJs           bool `arg:"--no-min-js,env:NO_MIN_JS" help:"Do not minify Javascript files"`
 	NoMinifyJson         bool `arg:"--no-min-json,env:NO_MIN_JSON" help:"Do not minify JSON files"`
 }
@@ -50,26 +50,26 @@ func (f FlagsV2) Hooks() []ssg.Hook {
 
 func (f FlagsV2) hookMinify() ssg.Hook {
 	m := make(map[string]MinifyFn)
-	if f.MinifyHtmlCopy {
-		m[".html"] = MinifyHtml
+	if f.MinifyHTMLCopy {
+		m[".html"] = MinifyHTML
 	}
-	if f.MinifyCss {
-		m[".css"] = MinifyCss
+	if f.MinifyCSS {
+		m[".css"] = MinifyCSS
 	}
 	if f.MinifyJs {
-		m[".js"] = MinifyJs
+		m[".js"] = MinifyJS
 	}
 	if f.MinifyJson {
-		m[".json"] = MinifyJson
+		m[".json"] = MinifyJSON
 	}
 	return HookMinify(m)
 }
 
 func (f FlagsNoMinify) Flags() FlagsV2 {
 	return FlagsV2{
-		MinifyHtmlGenerate: !f.NoMinifyHtmlGenerate,
-		MinifyHtmlCopy:     !f.NoMinifyHtmlCopy,
-		MinifyCss:          !f.NoMinifyCss,
+		MinifyHTMLGenerate: !f.NoMinifyHTMLGenerate,
+		MinifyHTMLCopy:     !f.NoMinifyHTMLCopy,
+		MinifyCSS:          !f.NoMinifyCSS,
 		MinifyJs:           !f.NoMinifyJs,
 		MinifyJson:         !f.NoMinifyJson,
 	}
@@ -77,22 +77,22 @@ func (f FlagsNoMinify) Flags() FlagsV2 {
 
 func (f FlagsNoMinify) Skip(ext string) bool {
 	switch ext {
-	case ExtHtml:
-		if f.NoMinifyHtmlGenerate {
+	case ExtHTML:
+		if f.NoMinifyHTMLGenerate {
 			return true
 		}
-		if f.NoMinifyHtmlCopy {
+		if f.NoMinifyHTMLCopy {
 			return true
 		}
-	case ExtCss:
-		if f.NoMinifyCss {
+	case ExtCSS:
+		if f.NoMinifyCSS {
 			return true
 		}
-	case ExtJs:
+	case ExtJS:
 		if f.NoMinifyJs {
 			return true
 		}
-	case ExtJson:
+	case ExtJSON:
 		if f.NoMinifyJson {
 			return true
 		}
