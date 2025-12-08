@@ -13,9 +13,10 @@ type IndexGeneratorMode string
 const (
 	MarkerIndex string = "_index.soyweb"
 
-	IndexGeneratorModeDefault IndexGeneratorMode = ""
-	IndexGeneratorModeReverse IndexGeneratorMode = "reverse"
-	IndexGeneratorModeModTime IndexGeneratorMode = "modtime"
+	IndexGeneratorModeDefault        IndexGeneratorMode = ""
+	IndexGeneratorModeReverse        IndexGeneratorMode = "reverse"
+	IndexGeneratorModeModTime        IndexGeneratorMode = "modtime"
+	IndexGeneratorModeModTimeReverse IndexGeneratorMode = "modtime-reverse"
 )
 
 var ErrWebFormatNotSupported = errors.New("unsupported web format")

@@ -22,70 +22,70 @@ func NewIndexGenerator(m IndexGeneratorMode) func(*ssg.Ssg) ssg.Pipeline {
 
 	case
 		IndexGeneratorModeModTime,
-		"updated_at",
-		"u":
+		"old",
+		"oldest":
 		return IndexGeneratorModTime
+
+	case IndexGeneratorModeModTimeReverse,
+		"new",
+		"newest":
+		return IndexGeneratorModTimeReverse
 	}
 
 	return IndexGenerator
 }
 
-// IndexGenerator returns an [ssg.Pipeline] that would look for
-// marker file "_index.soyweb" within a directory.
-//
-// Once it finds a marked directory, it inspects the children
-// and generate a Markdown list with name index.md,
-// which is later sent to supplied impl
+// IndexGenerator provides the default index generator.
+// The index list is sorted based on filenames of the siblings
+// in ascending order.
 func IndexGenerator(s *ssg.Ssg) ssg.Pipeline {
-	return IndexGeneratorTemplate(s, nil, generatorDefault)
+	return newGenerator(
+		s,
+		nil,
+		generatorV1,
+	)
 }
 
 // IndexGeneratorReverse returns an index generator whose index list
 // is populated reversed, i.e. descending alphanumerical sort
 func IndexGeneratorReverse(s *ssg.Ssg) ssg.Pipeline {
-	return IndexGeneratorTemplate(
+	return newGenerator(
 		s,
-		func(entries []fs.FileInfo) []fs.FileInfo {
-			slices.Reverse(entries)
-			return entries
-		},
-		generatorDefault,
+		reverser(nil),
+		generatorV1,
 	)
 }
 
 // IndexGeneratorModTime returns an index generator that sort index entries
-// by ModTime returned by fs.FileInfo
+// by ModTime, oldest first, as returned by fs.FileInfo
 func IndexGeneratorModTime(s *ssg.Ssg) ssg.Pipeline {
-	sortByModTime := func(entries []fs.FileInfo) func(i int, j int) bool {
-		return func(i, j int) bool {
-			infoI, infoJ := entries[i], entries[j]
-			cmp := infoI.ModTime().Compare(infoJ.ModTime())
-			if cmp == 0 {
-				return infoI.Name() < infoJ.Name()
-			}
-			return cmp == -1
-		}
-	}
-
-	return IndexGeneratorTemplate(
+	return newGenerator(
 		s,
-		func(entries []fs.FileInfo) []fs.FileInfo {
-			sort.Slice(entries, sortByModTime(entries))
-			return entries
-		},
-		generatorDefault,
+		sortByModTime,
+		generatorV1,
 	)
 }
 
-// IndexGeneratorTemplate allows us to build an index generator pipeline from 2 components:
+// IndexGeneratorModTimeReverse returns an index generator that sort index entries
+// by ModTime, newest first, as returned by fs.FileInfo
+func IndexGeneratorModTimeReverse(s *ssg.Ssg) ssg.Pipeline {
+	return newGenerator(
+		s,
+		reverser(sortByModTime),
+		generatorV1,
+	)
+}
+
+// newGenerator allows us to build an index generator pipeline from 2 components:
 // 1. fnEntries - a function that intercepts entries and returns the actual entries to be used.
 // This is useful when you want to implement some kind of entry filter, or just want to inspect entries
 // before handling them over to the generators.
 //
-// 2. fnGenIndex - a function that is called for each marker _index.soyweb.
-func IndexGeneratorTemplate(
+// 2. fnGenIndex - a function that is called for each marker _index.soyweb,
+// returning the whole generated index as a Markdown string.
+func newGenerator(
 	s *ssg.Ssg,
-	fnSortEntries func(entries []fs.FileInfo) []fs.FileInfo,
+	fnEntries func(entries []fs.FileInfo) []fs.FileInfo,
 	fnGenIndex func(
 		ssgSrc string,
 		ignore func(path string) bool,
@@ -127,8 +127,8 @@ func IndexGeneratorTemplate(
 			infos[i] = info
 		}
 
-		if fnSortEntries != nil {
-			infos = fnSortEntries(infos)
+		if fnEntries != nil {
+			infos = fnEntries(infos)
 		}
 
 		template, err := ssg.ReadFile(path)
@@ -144,7 +144,7 @@ func IndexGeneratorTemplate(
 	}
 }
 
-// generatorDefault is a default index generator.
+// generatorV1 is a default index generator.
 //
 // It generates 1 index.md for each _index.soyweb.
 // The default generator does accept a template, and will append its generated content
@@ -158,18 +158,18 @@ func IndexGeneratorTemplate(
 // each line composing of 2 components: a link title and the actual link path,
 // looking something like this: `[link-title](/actual/link)`.
 //
-// generatorDefault ensures that all links have titles, and will automatically
+// generatorV1 ensures that all links have titles, and will automatically
 // select link titles based on these 2 steps:
 //
 // 1. From the entry filename or directory name.
 // For example, if there're 2 entries ./entry1.md and ./entry-2/index.md,
-// then generatorDefault will first assign "entry1" as link title for ./entry1.md,
+// then generatorV1 will first assign "entry1" as link title for ./entry1.md,
 // while "entry-2" is used for ./entry-2/index.md.
 //
 // 2. From the entry's 1st h1 tag.
-// If your entry happens to have an h1 tag, generatorDefault will use those as link title.
+// If your entry happens to have an h1 tag, generatorV1 will use those as link title.
 // Otherwise it just sticks with link title previously obtained from step 1.
-func generatorDefault(
+func generatorV1(
 	src string,
 	ignore func(path string) bool,
 	parent string,
@@ -295,4 +295,31 @@ func extractTitle(path string) ([]byte, error) {
 		return title, nil
 	}
 	return ssg.GetTitleFromH1(data), nil
+}
+
+func sortByModTime(entries []fs.FileInfo) []fs.FileInfo {
+	sort.Slice(entries, func(i, j int) bool {
+		infoI, infoJ := entries[i], entries[j]
+		cmp := infoI.ModTime().Compare(infoJ.ModTime())
+		if cmp == 0 {
+			return infoI.Name() < infoJ.Name()
+		}
+		return cmp == -1
+	})
+	return entries
+}
+
+// reverser takes in a function fn, and returns a new function whose return value from fn is reversed
+func reverser(fn func([]fs.FileInfo) []fs.FileInfo) func([]fs.FileInfo) []fs.FileInfo {
+	if fn == nil {
+		return func(entries []fs.FileInfo) []fs.FileInfo {
+			slices.Reverse(entries)
+			return entries
+		}
+	}
+	return func(entries []fs.FileInfo) []fs.FileInfo {
+		sorted := fn(entries)
+		slices.Reverse(sorted)
+		return sorted
+	}
 }
