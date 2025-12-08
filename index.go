@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 
 	"github.com/soyart/ssg-go"
@@ -45,7 +46,7 @@ func IndexGeneratorReverse(s *ssg.Ssg) ssg.Pipeline {
 	return IndexGeneratorTemplate(
 		s,
 		func(entries []fs.FileInfo) []fs.FileInfo {
-			reverseDirEntries(entries)
+			slices.Reverse(entries)
 			return entries
 		},
 		generatorDefault,
@@ -74,12 +75,6 @@ func IndexGeneratorModTime(s *ssg.Ssg) ssg.Pipeline {
 		},
 		generatorDefault,
 	)
-}
-
-func reverseDirEntries(arr []fs.FileInfo) {
-	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
-		arr[i], arr[j] = arr[j], arr[i]
-	}
 }
 
 // IndexGeneratorTemplate allows us to build an index generator pipeline from 2 components:
