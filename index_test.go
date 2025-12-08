@@ -394,6 +394,271 @@ func TestGenerateIndexModTime(t *testing.T) {
 	})
 }
 
+func TestGenerateIndexModTimeReverse(t *testing.T) {
+	// Create a temporary directory with controlled modification times
+	src := t.TempDir()
+	dst := filepath.Join(t.TempDir(), "dst")
+	title := "TestTitle"
+	url := "https://my.blog.testgenindexmodtimereverse"
+
+	// Setup test structure with specific modification times
+	// We'll create files with known modtimes to test reverse sorting (newest first)
+	now := time.Now()
+	oldTime := now.Add(-72 * time.Hour)    // 3 days ago
+	mediumTime := now.Add(-24 * time.Hour) // 1 day ago
+	recentTime := now.Add(-1 * time.Hour)  // 1 hour ago
+
+	// Create directory structure
+	err := os.MkdirAll(filepath.Join(src, "blog"), 0o755)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create articles with different modification times
+	// oldest.md - oldest file
+	oldestPath := filepath.Join(src, "blog", "oldest.md")
+	err = os.WriteFile(oldestPath, []byte("# Oldest Post\n\nContent"), 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = os.Chtimes(oldestPath, oldTime, oldTime)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// medium.md - medium age file
+	mediumPath := filepath.Join(src, "blog", "medium.md")
+	err = os.WriteFile(mediumPath, []byte("# Medium Post\n\nContent"), 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = os.Chtimes(mediumPath, mediumTime, mediumTime)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// newest.md - newest file
+	newestPath := filepath.Join(src, "blog", "newest.md")
+	err = os.WriteFile(newestPath, []byte("# Newest Post\n\nContent"), 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = os.Chtimes(newestPath, recentTime, recentTime)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the _index.soyweb marker
+	markerPath := filepath.Join(src, "blog", "_index.soyweb")
+	err = os.WriteFile(markerPath, []byte("# Blog Posts\n\n"), 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate with ModTimeReverse indexer
+	err = ssg.Generate(src, dst, title, url, ssg.WithPipelines(soyweb.IndexGeneratorModTimeReverse))
+	if err != nil {
+		t.Fatalf("error during ssg generation with modtime-reverse: %v", err)
+	}
+
+	t.Run("should sort entries by modification time in reverse (newest first)", func(t *testing.T) {
+		indexPath := filepath.Join(dst, "blog", "index.html")
+		assertFs(t, indexPath, false)
+
+		content, err := os.ReadFile(indexPath)
+		if err != nil {
+			t.Fatalf("failed to read index: %v", err)
+		}
+
+		contentStr := string(content)
+
+		// Expected links in order (newest to oldest) - REVERSED from ModTime
+		newestLink := `<a href="/blog/newest.html">Newest Post</a>`
+		mediumLink := `<a href="/blog/medium.html">Medium Post</a>`
+		oldestLink := `<a href="/blog/oldest.html">Oldest Post</a>`
+
+		// Find positions
+		newestPos := strings.Index(contentStr, newestLink)
+		mediumPos := strings.Index(contentStr, mediumLink)
+		oldestPos := strings.Index(contentStr, oldestLink)
+
+		// Verify all links exist
+		if newestPos == -1 {
+			t.Log("content:\n", contentStr)
+			t.Fatal("newest post link not found")
+		}
+		if mediumPos == -1 {
+			t.Log("content:\n", contentStr)
+			t.Fatal("medium post link not found")
+		}
+		if oldestPos == -1 {
+			t.Log("content:\n", contentStr)
+			t.Fatal("oldest post link not found")
+		}
+
+		// Verify order: newest < medium < oldest (reverse chronological)
+		if newestPos >= mediumPos {
+			t.Log("content:\n", contentStr)
+			t.Fatalf("newest post (pos %d) should come before medium post (pos %d)", newestPos, mediumPos)
+		}
+		if mediumPos >= oldestPos {
+			t.Log("content:\n", contentStr)
+			t.Fatalf("medium post (pos %d) should come before oldest post (pos %d)", mediumPos, oldestPos)
+		}
+	})
+
+	t.Run("handles files with same modtime using reverse alphabetical sort", func(t *testing.T) {
+		// Create another test directory for same-time files
+		sameSrc := t.TempDir()
+		sameDst := filepath.Join(t.TempDir(), "dst")
+
+		err := os.MkdirAll(filepath.Join(sameSrc, "posts"), 0o755)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		sameTime := now.Add(-12 * time.Hour)
+
+		// Create files with identical modtimes
+		for _, name := range []string{"alpha.md", "beta.md", "zebra.md"} {
+			path := filepath.Join(sameSrc, "posts", name)
+			title := strings.TrimSuffix(name, ".md")
+			err = os.WriteFile(path, fmt.Appendf(nil, "# %s\n\nContent", title), 0o644)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = os.Chtimes(path, sameTime, sameTime)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		// Create marker
+		markerPath := filepath.Join(sameSrc, "posts", "_index.soyweb")
+		err = os.WriteFile(markerPath, []byte("# Posts\n\n"), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = ssg.Generate(sameSrc, sameDst, title, url, ssg.WithPipelines(soyweb.IndexGeneratorModTimeReverse))
+		if err != nil {
+			t.Fatalf("error during generation: %v", err)
+		}
+
+		indexPath := filepath.Join(sameDst, "posts", "index.html")
+		content, err := os.ReadFile(indexPath)
+		if err != nil {
+			t.Fatalf("failed to read index: %v", err)
+		}
+
+		contentStr := string(content)
+
+		// When modtimes are equal, should sort alphabetically then reverse
+		// So: alpha, beta, zebra -> zebra, beta, alpha
+		alphaPos := strings.Index(contentStr, `<a href="/posts/alpha.html">alpha</a>`)
+		betaPos := strings.Index(contentStr, `<a href="/posts/beta.html">beta</a>`)
+		zebraPos := strings.Index(contentStr, `<a href="/posts/zebra.html">zebra</a>`)
+
+		if alphaPos == -1 || betaPos == -1 || zebraPos == -1 {
+			t.Log("content:\n", contentStr)
+			t.Fatal("not all links found")
+		}
+
+		// In reverse: zebra < beta < alpha
+		if zebraPos >= betaPos || betaPos >= alphaPos {
+			t.Log("content:\n", contentStr)
+			t.Fatalf("files with same modtime should be reverse alphabetically sorted: zebra(%d) < beta(%d) < alpha(%d)",
+				zebraPos, betaPos, alphaPos)
+		}
+	})
+
+	t.Run("opposite order of modtime generator", func(t *testing.T) {
+		// Create side-by-side comparison
+		compareSrc := t.TempDir()
+		dstModTime := filepath.Join(t.TempDir(), "modtime")
+		dstModTimeReverse := filepath.Join(t.TempDir(), "modtime-reverse")
+
+		err := os.MkdirAll(filepath.Join(compareSrc, "articles"), 0o755)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Create files with different timestamps
+		timestamps := []struct {
+			name string
+			time time.Time
+		}{
+			{"first.md", now.Add(-48 * time.Hour)},
+			{"second.md", now.Add(-24 * time.Hour)},
+			{"third.md", now.Add(-1 * time.Hour)},
+		}
+
+		for _, ts := range timestamps {
+			path := filepath.Join(compareSrc, "articles", ts.name)
+			title := strings.TrimSuffix(ts.name, ".md")
+			err = os.WriteFile(path, []byte(fmt.Sprintf("# %s\n\nContent", title)), 0o644)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = os.Chtimes(path, ts.time, ts.time)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		markerPath := filepath.Join(compareSrc, "articles", "_index.soyweb")
+		err = os.WriteFile(markerPath, []byte("# Articles\n\n"), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Generate with both generators
+		err = ssg.Generate(compareSrc, dstModTime, title, url, ssg.WithPipelines(soyweb.IndexGeneratorModTime))
+		if err != nil {
+			t.Fatalf("error generating with modtime: %v", err)
+		}
+
+		err = ssg.Generate(compareSrc, dstModTimeReverse, title, url, ssg.WithPipelines(soyweb.IndexGeneratorModTimeReverse))
+		if err != nil {
+			t.Fatalf("error generating with modtime-reverse: %v", err)
+		}
+
+		// Read both indexes
+		modTimeContent, err := os.ReadFile(filepath.Join(dstModTime, "articles", "index.html"))
+		if err != nil {
+			t.Fatalf("failed to read modtime index: %v", err)
+		}
+
+		modTimeReverseContent, err := os.ReadFile(filepath.Join(dstModTimeReverse, "articles", "index.html"))
+		if err != nil {
+			t.Fatalf("failed to read modtime-reverse index: %v", err)
+		}
+
+		modTimeStr := string(modTimeContent)
+		modTimeReverseStr := string(modTimeReverseContent)
+
+		// Get positions in modtime (oldest first: first, second, third)
+		firstPosOld := strings.Index(modTimeStr, `<a href="/articles/first.html">first</a>`)
+		thirdPosOld := strings.Index(modTimeStr, `<a href="/articles/third.html">third</a>`)
+
+		// Get positions in modtime-reverse (newest first: third, second, first)
+		firstPosNew := strings.Index(modTimeReverseStr, `<a href="/articles/first.html">first</a>`)
+		thirdPosNew := strings.Index(modTimeReverseStr, `<a href="/articles/third.html">third</a>`)
+
+		// In modtime: first comes before third
+		if firstPosOld >= thirdPosOld {
+			t.Log("modtime content:\n", modTimeStr)
+			t.Fatalf("in modtime, 'first' should come before 'third'")
+		}
+
+		// In modtime-reverse: third comes before first
+		if thirdPosNew >= firstPosNew {
+			t.Log("modtime-reverse content:\n", modTimeReverseStr)
+			t.Fatalf("in modtime-reverse, 'third' should come before 'first'")
+		}
+	})
+}
+
 func formatIndexPath(marker string) string {
 	marker = filepath.Dir(marker)
 	return filepath.Join(marker, "index.html")

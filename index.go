@@ -51,7 +51,7 @@ func IndexGenerator(s *ssg.Ssg) ssg.Pipeline {
 func IndexGeneratorReverse(s *ssg.Ssg) ssg.Pipeline {
 	return newGenerator(
 		s,
-		reverser(nil),
+		reverser[fs.FileInfo](nil),
 		generatorV1,
 	)
 }
@@ -310,15 +310,16 @@ func sortByModTime(entries []fs.FileInfo) []fs.FileInfo {
 }
 
 // reverser takes in a function fn, and returns a new function whose return value from fn is reversed
-func reverser(fn func([]fs.FileInfo) []fs.FileInfo) func([]fs.FileInfo) []fs.FileInfo {
+// If fn is nil, it returns a function that reverses the input data.
+func reverser[T any](fn func([]T) []T) func([]T) []T {
 	if fn == nil {
-		return func(entries []fs.FileInfo) []fs.FileInfo {
-			slices.Reverse(entries)
-			return entries
+		return func(data []T) []T {
+			slices.Reverse(data)
+			return data
 		}
 	}
-	return func(entries []fs.FileInfo) []fs.FileInfo {
-		sorted := fn(entries)
+	return func(data []T) []T {
+		sorted := fn(data)
 		slices.Reverse(sorted)
 		return sorted
 	}
