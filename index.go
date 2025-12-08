@@ -36,22 +36,20 @@ func NewIndexGenerator(m IndexGeneratorMode) func(*ssg.Ssg) ssg.Pipeline {
 // and generate a Markdown list with name index.md,
 // which is later sent to supplied impl
 func IndexGenerator(s *ssg.Ssg) ssg.Pipeline {
-	return IndexGeneratorTemplate(
-		nil,
-		generatorDefault,
-	)(s)
+	return IndexGeneratorTemplate(s, nil, generatorDefault)
 }
 
 // IndexGeneratorReverse returns an index generator whose index list
 // is populated reversed, i.e. descending alphanumerical sort
 func IndexGeneratorReverse(s *ssg.Ssg) ssg.Pipeline {
 	return IndexGeneratorTemplate(
+		s,
 		func(entries []fs.FileInfo) []fs.FileInfo {
-			reverseInPlace(entries)
+			reverseDirEntries(entries)
 			return entries
 		},
 		generatorDefault,
-	)(s)
+	)
 }
 
 // IndexGeneratorModTime returns an index generator that sort index entries
@@ -69,15 +67,16 @@ func IndexGeneratorModTime(s *ssg.Ssg) ssg.Pipeline {
 	}
 
 	return IndexGeneratorTemplate(
+		s,
 		func(entries []fs.FileInfo) []fs.FileInfo {
 			sort.Slice(entries, sortByModTime(entries))
 			return entries
 		},
 		generatorDefault,
-	)(s)
+	)
 }
 
-func reverseInPlace(arr []fs.FileInfo) {
+func reverseDirEntries(arr []fs.FileInfo) {
 	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
 		arr[i], arr[j] = arr[j], arr[i]
 	}
@@ -90,7 +89,8 @@ func reverseInPlace(arr []fs.FileInfo) {
 //
 // 2. fnGenIndex - a function that is called for each marker _index.soyweb.
 func IndexGeneratorTemplate(
-	fnEntries func(entries []fs.FileInfo) []fs.FileInfo,
+	s *ssg.Ssg,
+	fnSortEntries func(entries []fs.FileInfo) []fs.FileInfo,
 	fnGenIndex func(
 		ssgSrc string,
 		ignore func(path string) bool,
@@ -101,53 +101,51 @@ func IndexGeneratorTemplate(
 		string,
 		error,
 	),
-) func(*ssg.Ssg) ssg.Pipeline {
-	return func(s *ssg.Ssg) ssg.Pipeline {
-		return func(path string, data []byte, d fs.DirEntry) (string, []byte, fs.DirEntry, error) {
-			switch {
-			case
-				d.IsDir(),
-				filepath.Base(path) != MarkerIndex:
-				return path, data, d, nil
+) ssg.Pipeline {
+	return func(path string, data []byte, d fs.DirEntry) (string, []byte, fs.DirEntry, error) {
+		switch {
+		case
+			d.IsDir(),
+			filepath.Base(path) != MarkerIndex:
+			return path, data, d, nil
 
-			case s.Ignore(path):
-				panic("unexpected ignored file for index-generator: " + path)
-			}
-
-			parent := filepath.Dir(path)
-			ssg.Fprintf(os.Stdout, "found index-generator marker: marker=\"%s\", parent=\"%s\"\n", path, parent)
-
-			entries, err := os.ReadDir(parent)
-			if err != nil {
-				return "", nil, nil, fmt.Errorf("failed to read marker dir '%s': %w", path, err)
-			}
-
-			infos := make([]fs.FileInfo, len(entries))
-			for i := range entries {
-				entry := entries[i]
-				info, err := entry.Info()
-				if err != nil {
-					return "", nil, nil, fmt.Errorf("failed to stat entry '%s' in path '%s': %w", entry.Name(), path, err)
-				}
-
-				infos[i] = info
-			}
-
-			if fnEntries != nil {
-				infos = fnEntries(infos)
-			}
-
-			template, err := ssg.ReadFile(path)
-			if err != nil {
-				return "", nil, nil, fmt.Errorf("failed to read marker '%s': %w", path, err)
-			}
-			index, err := fnGenIndex(s.Src, s.Ignore, parent, infos, template)
-			if err != nil {
-				return "", nil, nil, fmt.Errorf("failed to generate article links for marker %s: %w", path, err)
-			}
-
-			return filepath.Join(parent, "index.md"), []byte(index), d, nil
+		case s.Ignore(path):
+			panic("unexpected ignored file for index-generator: " + path)
 		}
+
+		parent := filepath.Dir(path)
+		ssg.Fprintf(os.Stdout, "found index-generator marker: marker=\"%s\", parent=\"%s\"\n", path, parent)
+
+		entries, err := os.ReadDir(parent)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("failed to read marker dir '%s': %w", path, err)
+		}
+
+		infos := make([]fs.FileInfo, len(entries))
+		for i := range entries {
+			entry := entries[i]
+			info, err := entry.Info()
+			if err != nil {
+				return "", nil, nil, fmt.Errorf("failed to stat entry '%s' in path '%s': %w", entry.Name(), path, err)
+			}
+
+			infos[i] = info
+		}
+
+		if fnSortEntries != nil {
+			infos = fnSortEntries(infos)
+		}
+
+		template, err := ssg.ReadFile(path)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("failed to read marker '%s': %w", path, err)
+		}
+		index, err := fnGenIndex(s.Src, s.Ignore, parent, infos, template)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("failed to generate article links for marker %s: %w", path, err)
+		}
+
+		return filepath.Join(parent, "index.md"), []byte(index), d, nil
 	}
 }
 
