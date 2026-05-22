@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"reflect"
 
 	"github.com/soyart/ssg-go"
 )
@@ -153,15 +152,15 @@ func decodeReplace(data any) (ReplaceTarget, error) {
 		}
 		text, ok := textRaw.(string)
 		if !ok {
-			return ReplaceTarget{}, fmt.Errorf("unexpected type for field 'text': %s'", reflect.TypeOf(textRaw).String())
+			return ReplaceTarget{}, fmt.Errorf("unexpected type for field 'text': %T", textRaw)
 		}
 		countRaw, ok := data["count"]
 		if !ok {
-			return ReplaceTarget{}, errors.New("missing field 'text'")
+			return ReplaceTarget{}, errors.New("missing field 'count'")
 		}
 		countFloat, ok := countRaw.(float64)
 		if !ok {
-			return ReplaceTarget{}, fmt.Errorf("unexpected type for field 'count': '%s'", reflect.TypeOf(countRaw).String())
+			return ReplaceTarget{}, fmt.Errorf("unexpected type for field 'count': %T", countRaw)
 		}
 		if countFloat < 0 {
 			return ReplaceTarget{}, fmt.Errorf("bad replace count %f", countFloat)
@@ -172,7 +171,7 @@ func decodeReplace(data any) (ReplaceTarget, error) {
 		}, nil
 	}
 
-	return ReplaceTarget{}, fmt.Errorf("bad entry data shape of type %s: '%+v'", reflect.TypeOf(data).String(), data)
+	return ReplaceTarget{}, fmt.Errorf("bad entry data shape of type %T: '%+v'", data, data)
 }
 
 func parseCopyTarget(data any) ([]CopyTarget, error) {
@@ -198,7 +197,7 @@ func parseCopyTarget(data any) ([]CopyTarget, error) {
 		}
 		target, ok := targetRaw.(string)
 		if !ok {
-			return nil, fmt.Errorf("invalid data type for field 'target', expecting string, got '%s'", reflect.TypeOf(targetRaw).String())
+			return nil, fmt.Errorf("invalid data type for field 'target', expecting string, got %T", targetRaw)
 		}
 
 		w := CopyTarget{Target: target}
@@ -209,14 +208,14 @@ func parseCopyTarget(data any) ([]CopyTarget, error) {
 		}
 		force, ok := forceRaw.(bool)
 		if !ok {
-			return nil, fmt.Errorf("invalid data type for field 'target', expecting bool, got '%s'", reflect.TypeOf(forceRaw).String())
+			return nil, fmt.Errorf("invalid data type for field 'target', expecting bool, got %T", forceRaw)
 		}
 
 		w.Force = force
 		return []CopyTarget{w}, nil
 	}
 
-	return nil, fmt.Errorf("bad entry data shape of type %s: '%+v'", reflect.TypeOf(data).String(), data)
+	return nil, fmt.Errorf("bad entry data shape of type %T: '%+v'", data, data)
 }
 
 type manifestError struct {

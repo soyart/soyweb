@@ -16,16 +16,16 @@ type FlagsV2 struct {
 	MinifyHTMLGenerate bool `arg:"--min-html" help:"Minify converted HTML outputs"`
 	MinifyHTMLCopy     bool `arg:"--min-html-copy" help:"Minify all copied HTML"`
 	MinifyCSS          bool `arg:"--min-css" help:"Minify CSS files"`
-	MinifyJs           bool `arg:"--min-js" help:"Minify Javascript files"`
-	MinifyJson         bool `arg:"--min-json" help:"Minify JSON files"`
+	MinifyJS           bool `arg:"--min-js" help:"Minify Javascript files"`
+	MinifyJSON         bool `arg:"--min-json" help:"Minify JSON files"`
 }
 
 type FlagsNoMinify struct {
 	NoMinifyHTMLGenerate bool `arg:"--no-min-html,env:NO_MIN_HTML" help:"Do not minify converted HTML outputs"`
 	NoMinifyHTMLCopy     bool `arg:"--no-min-html-copy,env:NO_MIN_HTML_COPY" help:"Do not minify all copied HTML"`
 	NoMinifyCSS          bool `arg:"--no-min-css,env:NO_MIN_CSS" help:"Do not minify CSS files"`
-	NoMinifyJs           bool `arg:"--no-min-js,env:NO_MIN_JS" help:"Do not minify Javascript files"`
-	NoMinifyJson         bool `arg:"--no-min-json,env:NO_MIN_JSON" help:"Do not minify JSON files"`
+	NoMinifyJS           bool `arg:"--no-min-js,env:NO_MIN_JS" help:"Do not minify Javascript files"`
+	NoMinifyJSON         bool `arg:"--no-min-json,env:NO_MIN_JSON" help:"Do not minify JSON files"`
 }
 
 func (f FlagsV2) Stage() Stage {
@@ -56,10 +56,10 @@ func (f FlagsV2) hookMinify() ssg.Hook {
 	if f.MinifyCSS {
 		m[".css"] = MinifyCSS
 	}
-	if f.MinifyJs {
+	if f.MinifyJS {
 		m[".js"] = MinifyJS
 	}
-	if f.MinifyJson {
+	if f.MinifyJSON {
 		m[".json"] = MinifyJSON
 	}
 	return HookMinify(m)
@@ -70,8 +70,8 @@ func (f FlagsNoMinify) Flags() FlagsV2 {
 		MinifyHTMLGenerate: !f.NoMinifyHTMLGenerate,
 		MinifyHTMLCopy:     !f.NoMinifyHTMLCopy,
 		MinifyCSS:          !f.NoMinifyCSS,
-		MinifyJs:           !f.NoMinifyJs,
-		MinifyJson:         !f.NoMinifyJson,
+		MinifyJS:           !f.NoMinifyJS,
+		MinifyJSON:         !f.NoMinifyJSON,
 	}
 }
 
@@ -89,11 +89,11 @@ func (f FlagsNoMinify) Skip(ext string) bool {
 			return true
 		}
 	case ExtJS:
-		if f.NoMinifyJs {
+		if f.NoMinifyJS {
 			return true
 		}
 	case ExtJSON:
-		if f.NoMinifyJson {
+		if f.NoMinifyJSON {
 			return true
 		}
 
